@@ -1,19 +1,26 @@
 <template>
-  <div class="container">
+  <div class="app-tpl">
+    <h1>{{title}}</h1>
+    <input v-model="formData.message" placeholder="Message" />
     <div>
-      <logo />
-      <h1 class="title">chat-express-nuxt</h1>
-      <h2 class="subtitle">Chat Express Nuxt</h2>
-      <div class="links">
-        <a href="https://nuxtjs.org/" target="_blank" class="button--green">Documentation</a>
-        <a href="https://github.com/nuxt/nuxt.js" target="_blank" class="button--grey">GitHub</a>
-      </div>
+      <button @click="onEmit">Emit Message</button>
+      <button @click="onPost">Post Message</button>
     </div>
+    <ul class="messages">
+      <li v-for="msg in messages">
+        <pre v-text="msg" />
+      </li>
+    </ul>
   </div>
 </template>
 
 <script>
 import Logo from '~/components/Logo.vue'
+import { state, methods } from '~/lib/store/storeMessages'
+import axios from 'axios'
+const post = (url, data) => axios.post(url, data).then(({ data }) => data)
+
+let socket
 
 export default {
 	head() {
@@ -23,39 +30,68 @@ export default {
 	},
 	components: {
 		Logo
+	},
+	data: () => ({
+		title: 'Chat Nuxt App',
+		formData: {
+			message: ''
+		}
+	}),
+	computed: {
+		messages() {
+			return state.messages
+		}
+	},
+	methods: {
+		onEmit() {
+			const { formData } = this
+			socket.emit('chat-message', formData.message)
+			console.log('onEmit:', formData.message, socket.id)
+			formData.message = ''
+		},
+		onPost() {
+			const { formData } = this,
+				url = '/api/message'
+			console.log('onPost:', formData.message)
+			post(url, {
+				id: socket.id,
+				message: formData.message
+			})
+				.then(console.log.bind(console, 'RESPONSE:'))
+				.catch(console.error.bind(console, 'FAIL - onPost:'))
+			formData.message = ''
+		}
+	},
+	// Life Cycle Hooks
+	mounted() {
+		socket = io()
+		socket.on('chat-message', methods.onMessage)
 	}
 }
 </script>
 
-<style>
-.container {
-	margin: 0 auto;
-	min-height: 100vh;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	text-align: center;
+<style lang="scss">
+body {
+	margin: 0;
+	padding: 0;
 }
 
-.title {
-	font-family: 'Quicksand', 'Source Sans Pro', -apple-system, BlinkMacSystemFont,
-		'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-	display: block;
-	font-weight: 300;
-	font-size: 100px;
-	color: #35495e;
-	letter-spacing: 1px;
+.app-tpl {
+	height: calc(100vh);
+	overflow-y: auto;
+	overflow-x: hidden;
+	background-color: rgb(248, 239, 201);
 }
 
-.subtitle {
-	font-weight: 300;
-	font-size: 42px;
-	color: #526488;
-	word-spacing: 5px;
-	padding-bottom: 15px;
-}
+.messages {
+	list-style: none;
+	margin: 0;
+	padding: 0;
 
-.links {
-	padding-top: 15px;
+	li {
+		&:nth-child(odd) {
+			background-color: yellow;
+		}
+	}
 }
 </style>

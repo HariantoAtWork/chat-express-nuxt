@@ -26,6 +26,7 @@ async function start() {
 
   app.use(express.json())
   app.use(express.urlencoded({ extended: false }))
+  app.use('/api', require('../api')({ Router, io }))
   // // Give nuxt middleware to express
   app.use(nuxt.render)
 
